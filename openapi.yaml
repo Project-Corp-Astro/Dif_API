@@ -1,0 +1,446 @@
+openapi: 3.0.3
+info:
+  title: Corp Astro API
+  description: Backend API for Corp Astro Mobile application
+  version: 1.0.0
+  contact:
+    name: Corp Astro Team
+servers:
+  - url: https://api.corpastroapps.com/api/v1
+    description: Production server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+        
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          
+    ReportType:
+      type: string
+      enum:
+        - natal
+        - compatibility
+        - transit
+        - solar_return
+        - lunar_return
+        - career
+        - relationship
+        - financial
+        
+    ReportStatus:
+      type: string
+      enum:
+        - pending
+        - processing
+        - completed
+        - failed
+        
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/ReportType'
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+        parameters:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        fileUrl:
+          type: string
+          format: uri
+          
+    ReportCreateRequest:
+      type: object
+      required:
+        - type
+        - title
+        - parameters
+      properties:
+        type:
+          $ref: '#/components/schemas/ReportType'
+        title:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+          
+    SubscriptionStatus:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+        plan:
+          type: string
+          enum:
+            - monthly_subscription
+            - yearly_subscription
+            - lifetime_subscription
+        expiryDate:
+          type: string
+          format: date-time
+        isLifetime:
+          type: boolean
+        isTrialActive:
+          type: boolean
+        trialEndDate:
+          type: string
+          format: date-time
+          
+    SubscriptionValidateRequest:
+      type: object
+      required:
+        - receipt
+        - productId
+        - platform
+      properties:
+        receipt:
+          type: string
+        productId:
+          type: string
+        platform:
+          type: string
+          enum:
+            - ios
+            - android
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the status of the API
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /reports:
+    get:
+      summary: List user reports
+      description: Returns a list of reports for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReportType'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReportStatus'
+      responses:
+        '200':
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Report'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a new report
+      description: Creates a new report for the authenticated user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+      responses:
+        '201':
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /reports/{id}:
+    get:
+      summary: Get report by ID
+      description: Returns a report by ID for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete report by ID
+      description: Deletes a report by ID for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Report deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /reports/{id}/download:
+    get:
+      summary: Get report download URL
+      description: Returns a signed URL to download the report file
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Download URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/status:
+    get:
+      summary: Get subscription status
+      description: Returns the subscription status for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Subscription status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/validate:
+    post:
+      summary: Validate subscription receipt
+      description: Validates a subscription receipt with the app store
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionValidateRequest'
+      responses:
+        '200':
+          description: Subscription validated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/sync:
+    post:
+      summary: Sync subscription status
+      description: Syncs the subscription status with the app store
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Subscription synced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/webhook:
+    post:
+      summary: Subscription webhook
+      description: Webhook endpoint for subscription notifications from app stores
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string

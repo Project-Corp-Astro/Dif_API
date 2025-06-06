@@ -1,0 +1,1001 @@
+openapi: 3.0.0
+info:
+  title: Corp Astro API
+  description: Backend API for the Corp Astro mobile app ecosystem
+  version: 1.0.0
+  contact:
+    name: Corp Astro Team
+servers:
+  - url: /api/v1
+    description: API version 1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+    
+    Success:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+    
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        zodiacSign:
+          type: string
+        avatarUrl:
+          type: string
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        subscription:
+          $ref: '#/components/schemas/Subscription'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    UserPreferences:
+      type: object
+      properties:
+        notifications:
+          type: object
+          properties:
+            dailyHoroscope:
+              type: boolean
+            chat:
+              type: boolean
+            newFeatures:
+              type: boolean
+        theme:
+          type: string
+          enum: [light, dark, system]
+        language:
+          type: string
+    
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        plan:
+          type: string
+          enum: [monthly, yearly, lifetime]
+        status:
+          type: string
+          enum: [active, expired, canceled, pending, trial]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        autoRenew:
+          type: boolean
+        platform:
+          type: string
+          enum: [ios, android, web]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    SubscriptionStatus:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+        plan:
+          type: string
+          enum: [monthly, yearly, lifetime]
+        expiryDate:
+          type: string
+          format: date-time
+        isLifetime:
+          type: boolean
+        isTrialActive:
+          type: boolean
+        trialEndDate:
+          type: string
+          format: date-time
+    
+    Horoscope:
+      type: object
+      properties:
+        id:
+          type: string
+        sign:
+          type: string
+          enum: [aries, taurus, gemini, cancer, leo, virgo, libra, scorpio, sagittarius, capricorn, aquarius, pisces]
+        date:
+          type: string
+          format: date
+        prediction:
+          type: string
+        compatibility:
+          type: string
+        mood:
+          type: string
+        color:
+          type: string
+        luckyNumber:
+          type: string
+        luckyTime:
+          type: string
+    
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        message:
+          type: string
+        sender:
+          type: string
+          enum: [user, ai]
+        timestamp:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+    
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [monthly, yearly, compatibility, career]
+        title:
+          type: string
+        description:
+          type: string
+        fileUrl:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        parameters:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                name:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/login:
+    post:
+      summary: Login with email and password
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      refreshToken:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/logout:
+    post:
+      summary: Logout user
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /profile:
+    get:
+      summary: Get user profile
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      summary: Update user profile
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                birthDate:
+                  type: string
+                  format: date
+                preferences:
+                  $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /profile/avatar:
+    post:
+      summary: Upload avatar image
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      avatarUrl:
+                        type: string
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete avatar image
+      tags:
+        - Profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Avatar deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/status:
+    get:
+      summary: Get subscription status
+      tags:
+        - Subscription
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/validate:
+    post:
+      summary: Validate subscription receipt
+      tags:
+        - Subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - receipt
+                - productId
+                - platform
+              properties:
+                receipt:
+                  type: string
+                productId:
+                  type: string
+                platform:
+                  type: string
+                  enum: [ios, android]
+      responses:
+        '200':
+          description: Receipt validated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '400':
+          description: Invalid receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /subscription/sync:
+    post:
+      summary: Sync subscription status with store
+      tags:
+        - Subscription
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription synced successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /horoscope/daily/{sign}/{date}:
+    get:
+      summary: Get daily horoscope by zodiac sign and date
+      tags:
+        - Horoscope
+      parameters:
+        - name: sign
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [aries, taurus, gemini, cancer, leo, virgo, libra, scorpio, sagittarius, capricorn, aquarius, pisces]
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Daily horoscope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Horoscope'
+        '404':
+          description: Horoscope not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /horoscope/daily/all/{date}:
+    get:
+      summary: Get all horoscopes for a date
+      tags:
+        - Horoscope
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: All horoscopes for date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      horoscopes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Horoscope'
+        '404':
+          description: Horoscopes not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /horoscope/personal:
+    get:
+      summary: Get personal horoscope based on user birth date
+      tags:
+        - Horoscope
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Personal horoscope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Horoscope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User birth date not set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /chat/history:
+    get:
+      summary: Get chat history
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      messages:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChatMessage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /chat/message:
+    post:
+      summary: Send a chat message
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /chat/message/{id}/read:
+    put:
+      summary: Mark a message as read
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /chat/message/{id}:
+    delete:
+      summary: Delete a chat message
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /reports:
+    post:
+      summary: Create a new report
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - parameters
+              properties:
+                type:
+                  type: string
+                  enum: [monthly, yearly, compatibility, career]
+                parameters:
+                  type: object
+      responses:
+        '201':
+          description: Report created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    get:
+      summary: List all reports
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [monthly, yearly, compatibility, career]
+      responses:
+        '200':
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      reports:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Report'
+                      total:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /reports/{id}:
+    get:
+      summary: Get a report by ID
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete a report
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /reports/{id}/download:
+    get:
+      summary: Get download URL for a report
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report download URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                      expiresAt:
+                        type: string
+                        format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
