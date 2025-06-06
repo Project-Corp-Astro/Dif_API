@@ -8,6 +8,18 @@ The Corp Astro API is the backend server that powers the Corp Astro mobile appli
 
 **For non-developers:** This is the server-side component that handles all the behind-the-scenes operations for the Corp Astro mobile app. It processes data, manages user accounts, validates purchases, and delivers content to the mobile application.
 
+### Key Technologies
+
+- **Runtime Environment**: Node.js (v16+)
+- **Framework**: Express 5 with TypeScript
+- **Database**: PostgreSQL via Supabase
+- **Authentication**: JWT-based with Supabase Auth
+- **Real-time Communication**: Socket.IO for WebSockets
+- **Push Notifications**: Firebase Cloud Messaging (FCM)
+- **Containerization**: Docker & Docker Compose
+- **Deployment**: DigitalOcean App Platform
+- **CI/CD**: GitHub Actions
+
 ## 🏗️ System Architecture
 
 ```
@@ -407,16 +419,53 @@ The API integrates with the [Corp Astro Mobile App](https://github.com/Project-C
 2. **WebSockets**: Real-time communication for chat and notifications
 3. **Push Notifications**: FCM for delivering alerts to mobile devices
 
-### API Endpoints Overview
+### 🔌 API Endpoints & Services
 
-| Endpoint Group | Purpose | Key Endpoints |
-|---------------|---------|---------------|
-| `/auth` | User authentication | `/login`, `/register`, `/refresh-token` |
+### Core Service Architecture
+
+The API is organized into domain-specific controllers and services that handle different aspects of the application:
+
+1. **Authentication Service**
+   - JWT-based authentication with Supabase integration
+   - Multi-provider auth support (Email, Apple, Google, Facebook)
+   - Token refresh and validation mechanisms
+
+2. **Subscription Service**
+   - In-app purchase receipt validation for iOS and Android
+   - Subscription status tracking and expiration management
+   - Webhook handling for store notifications (App Store, Google Play)
+
+3. **Horoscope Service**
+   - Daily, weekly, and monthly horoscope generation
+   - Personalized content based on user birth chart
+   - Compatibility analysis between different signs
+
+4. **Report Service**
+   - Detailed astrological report generation
+   - PDF creation and storage management
+   - Report history and access control
+
+5. **Notification Service**
+   - Firebase Cloud Messaging (FCM) integration
+   - Device registration and token management
+   - Scheduled and triggered notifications
+
+6. **Chat Service**
+   - Real-time communication via WebSockets
+   - Message history and persistence
+   - User presence and typing indicators
+
+### API Endpoint Reference
+
+| Base Path | Description | Example Endpoints |
+|-----------|-------------|-------------------|
+| `/auth` | Authentication endpoints | `/login`, `/register`, `/refresh-token` |
 | `/users` | User profile management | `/profile`, `/preferences` |
-| `/subscriptions` | Subscription handling | `/verify-receipt`, `/status` |
+| `/subscriptions` | Subscription handling | `/validate`, `/status`, `/webhook` |
 | `/horoscopes` | Horoscope content | `/daily`, `/weekly`, `/compatibility` |
 | `/reports` | Astrological reports | `/generate`, `/download/:id` |
 | `/notifications` | Device registration | `/register-device`, `/settings` |
+| `/chat` | Real-time messaging | `/history`, `/send` |
 
 ## 📚 Additional Documentation
 
