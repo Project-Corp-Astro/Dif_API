@@ -142,7 +142,9 @@ jobs:
       - name: Deploy to DigitalOcean App Platform
         if: github.ref == 'refs/heads/main'
         run: |
-          doctl apps create-deployment ${{ secrets.DIGITALOCEAN_APP_ID }}
+          doctl apps create-deployment $DIGITALOCEAN_APP_ID
+        env:
+          DIGITALOCEAN_APP_ID: ${{ secrets.DIGITALOCEAN_APP_ID }}
           
       - name: Deploy to staging
         if: github.ref == 'refs/heads/develop'
@@ -153,10 +155,14 @@ jobs:
       - name: Deploy to DigitalOcean Staging App
         if: github.ref == 'refs/heads/develop'
         run: |
-          doctl apps create-deployment ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
+          doctl apps create-deployment $DIGITALOCEAN_STAGING_APP_ID
+        env:
+          DIGITALOCEAN_STAGING_APP_ID: ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
           
       - name: Notify deployment status
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{"text":"API deployment completed successfully!"}' \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
