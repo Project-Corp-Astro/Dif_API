@@ -8,6 +8,18 @@ You may notice IDE linting warnings in the workflow files about "Context access 
 
 These warnings occur because the IDE's linter has limitations in how it validates GitHub Actions expressions and context access patterns. GitHub Actions itself handles these expressions correctly during workflow execution.
 
+## Solution to IDE Linting Warnings
+
+We've implemented a solution to address the persistent IDE linting warnings about "Context access might be invalid" for GitHub Actions secrets:
+
+1. **Workflow-level Environment Variables**: We define all secrets as environment variables at the workflow level, then reference these environment variables in the jobs and steps.
+
+2. **Official GitHub Actions**: We use official GitHub Actions for third-party services (DigitalOcean, Slack) to ensure proper secret handling.
+
+3. **Token File Approach**: For sensitive tokens like DigitalOcean access tokens, we use the official `digitalocean/action-doctl@v2` action which handles token authentication securely.
+
+This approach minimizes IDE linting warnings while maintaining secure practices for handling secrets.
+
 ## Required Secrets
 
 The following secrets need to be configured in the GitHub repository settings:

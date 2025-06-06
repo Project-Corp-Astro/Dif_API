@@ -17,6 +17,18 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  # Define environment variables at the workflow level
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  APPLE_WEBHOOK_SECRET: ${{ secrets.APPLE_WEBHOOK_SECRET }}
+  GOOGLE_WEBHOOK_SECRET: ${{ secrets.GOOGLE_WEBHOOK_SECRET }}
+  DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+  DIGITALOCEAN_APP_ID: ${{ secrets.DIGITALOCEAN_APP_ID }}
+  DIGITALOCEAN_STAGING_APP_ID: ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
 jobs:
   test:
     name: Test and Lint
@@ -39,23 +51,10 @@ jobs:
         run: npm run lint
         
       - name: Run tests
-        run: |
-          echo "Running tests with environment variables"
-          npm test
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          APPLE_WEBHOOK_SECRET: ${{ secrets.APPLE_WEBHOOK_SECRET }}
-          GOOGLE_WEBHOOK_SECRET: ${{ secrets.GOOGLE_WEBHOOK_SECRET }}
+        run: npm test
           
       - name: Run IAP Verification Tests
-        run: |
-          echo "Running IAP verification tests"
-          npm run test:iap
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npm run test:iap
   
   build-and-deploy:
     name: Build and Deploy
@@ -92,26 +91,24 @@ jobs:
             ${{ steps.docker_meta.outputs.image }}:latest
             ${{ steps.docker_meta.outputs.image }}:${{ github.sha }}
       
+      # Install doctl for DigitalOcean deployments
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ env.DIGITALOCEAN_ACCESS_TOKEN }}
+      
       # Production deployment
       - name: Deploy to DigitalOcean (Production)
         if: github.ref == 'refs/heads/main'
-        uses: digitalocean/app-deploy-action@v1
-        with:
-          app-name: corp-astro-api-production
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          app-id: ${{ secrets.DIGITALOCEAN_APP_ID }}
+        run: doctl apps create-deployment $DIGITALOCEAN_APP_ID
           
       # Staging deployment
       - name: Deploy to DigitalOcean (Staging)
         if: github.ref == 'refs/heads/develop'
-        uses: digitalocean/app-deploy-action@v1
-        with:
-          app-name: corp-astro-api-staging
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          app-id: ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
+        run: doctl apps create-deployment $DIGITALOCEAN_STAGING_APP_ID
           
-      # Notification
-      - name: Notify deployment status (Production)
+      # Notification for production
+      - name: Notify production deployment
         if: github.ref == 'refs/heads/main'
         uses: slackapi/slack-github-action@v1.24.0
         with:
@@ -120,9 +117,10 @@ jobs:
               "text": "API deployment to production completed successfully!"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
           
-      - name: Notify deployment status (Staging)
+      # Notification for staging
+      - name: Notify staging deployment
         if: github.ref == 'refs/heads/develop'
         uses: slackapi/slack-github-action@v1.24.0
         with:
@@ -131,4 +129,4 @@ jobs:
               "text": "API deployment to staging completed successfully!"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
