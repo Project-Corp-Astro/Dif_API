@@ -1,10 +1,21 @@
-name: CI/CD Pipeline
+name: API CI/CD Pipeline
+
+# Required secrets:
+# - SUPABASE_URL: Supabase project URL
+# - SUPABASE_SERVICE_KEY: Supabase service key
+# - JWT_SECRET: Secret for JWT token signing
+# - APPLE_WEBHOOK_SECRET: Secret for Apple IAP webhook verification
+# - GOOGLE_WEBHOOK_SECRET: Secret for Google IAP webhook verification
+# - DIGITALOCEAN_ACCESS_TOKEN: DigitalOcean API token
+# - DIGITALOCEAN_APP_ID: Production app ID in DigitalOcean
+# - DIGITALOCEAN_STAGING_APP_ID: Staging app ID in DigitalOcean
+# - SLACK_WEBHOOK_URL: Webhook URL for Slack notifications
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop, feat/*, fix/*]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   test:
@@ -48,6 +59,11 @@ jobs:
           export APPLE_WEBHOOK_SECRET="$APPLE_WEBHOOK_SECRET"
           export GOOGLE_WEBHOOK_SECRET="$GOOGLE_WEBHOOK_SECRET"
           npm test
+          
+      - name: Run IAP verification tests
+        run: |
+          cd scripts
+          node run-iap-verification.js
   
   build:
     name: Build
@@ -117,6 +133,30 @@ jobs:
             ${{ steps.docker_meta.outputs.image }}:latest
             ${{ steps.docker_meta.outputs.image }}:${{ github.sha }}
       
-      # Add your deployment steps here
-      # For example, deploy to a cloud provider like AWS, GCP, or Azure
-      # Or use a service like Heroku, Render, or Railway
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main'
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        
+      - name: Deploy to DigitalOcean App Platform
+        if: github.ref == 'refs/heads/main'
+        run: |
+          doctl apps create-deployment ${{ secrets.DIGITALOCEAN_APP_ID }}
+          
+      - name: Deploy to staging
+        if: github.ref == 'refs/heads/develop'
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          
+      - name: Deploy to DigitalOcean Staging App
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          doctl apps create-deployment ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
+          
+      - name: Notify deployment status
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"API deployment completed successfully!"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}

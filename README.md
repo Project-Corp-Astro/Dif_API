@@ -174,6 +174,20 @@ docker build -t corp-astro-api .
 docker run -p 3000:3000 --env-file .env corp-astro-api
 ```
 
+## Frontend-Backend Interaction
+
+This API interacts with the [Corp Astro Mobile](https://github.com/Project-Corp-Astro/Dif_Mobile) application in the following ways:
+
+1. **Authentication**: Provides JWT tokens and refresh mechanisms for secure user sessions
+2. **Data Services**: Delivers user profiles, horoscopes, and reports to the mobile app
+3. **WebSockets**: Maintains real-time connections for chat and notifications
+4. **Push Notifications**: Sends FCM notifications to registered mobile devices
+5. **IAP Verification**: Validates in-app purchase receipts from Apple/Google stores
+
+## Related Repositories
+
+- [Corp Astro Mobile](https://github.com/Project-Corp-Astro/Dif_Mobile) - React Native mobile application
+
 ## License
 
 This project is proprietary and confidential.
