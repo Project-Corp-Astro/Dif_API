@@ -39,7 +39,9 @@ jobs:
         run: npm run lint
         
       - name: Run tests
-        run: npm test
+        run: |
+          echo "Running tests with environment variables"
+          npm test
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
@@ -48,7 +50,9 @@ jobs:
           GOOGLE_WEBHOOK_SECRET: ${{ secrets.GOOGLE_WEBHOOK_SECRET }}
           
       - name: Run IAP Verification Tests
-        run: npm run test:iap
+        run: |
+          echo "Running IAP verification tests"
+          npm run test:iap
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
@@ -89,41 +93,42 @@ jobs:
             ${{ steps.docker_meta.outputs.image }}:${{ github.sha }}
       
       # Production deployment
-      - name: Install doctl for production
+      - name: Deploy to DigitalOcean (Production)
         if: github.ref == 'refs/heads/main'
-        uses: digitalocean/action-doctl@v2
+        uses: digitalocean/app-deploy-action@v1
         with:
+          app-name: corp-astro-api-production
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-        
-      - name: Deploy to production
-        if: github.ref == 'refs/heads/main'
-        run: doctl apps create-deployment $DO_APP_ID
-        env:
-          DO_APP_ID: ${{ secrets.DIGITALOCEAN_APP_ID }}
+          app-id: ${{ secrets.DIGITALOCEAN_APP_ID }}
           
       # Staging deployment
-      - name: Install doctl for staging
+      - name: Deploy to DigitalOcean (Staging)
         if: github.ref == 'refs/heads/develop'
-        uses: digitalocean/action-doctl@v2
+        uses: digitalocean/app-deploy-action@v1
         with:
+          app-name: corp-astro-api-staging
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          
-      - name: Deploy to staging
-        if: github.ref == 'refs/heads/develop'
-        run: doctl apps create-deployment $DO_STAGING_APP_ID
-        env:
-          DO_STAGING_APP_ID: ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
+          app-id: ${{ secrets.DIGITALOCEAN_STAGING_APP_ID }}
           
       # Notification
-      - name: Notify deployment status
-        run: |
-          ENVIRONMENT="production"
-          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            ENVIRONMENT="staging"
-          fi
-          
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"API deployment to ${ENVIRONMENT} completed successfully!\"}" \
-          $WEBHOOK_URL
+      - name: Notify deployment status (Production)
+        if: github.ref == 'refs/heads/main'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "API deployment to production completed successfully!"
+            }
         env:
-          WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+      - name: Notify deployment status (Staging)
+        if: github.ref == 'refs/heads/develop'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "API deployment to staging completed successfully!"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
